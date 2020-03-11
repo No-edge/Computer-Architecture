@@ -1,9 +1,9 @@
-//当您的向量已满时，将其容量增加到VECTOR_GROWTH_FACTOR * original_capacity
-//当用户在不应该有空指针的地方输入一个空指针时，你的程序必须返回VECTOR_ERROR，一个空指针，一个指针为空、大小为0的迭代器，等等，但是它永远不会崩溃。
-//我们要求每四行非空行有一行注释。评论必须是有意义的，而且是用英语写的。
-//不允许任何内存泄漏。内存泄漏将自动检测和手动筛选，并将导致您的分数下降后的最后期限。
-//我们还将对您的LoC(代码行数)施加400的限制。不要超过这个限额，因为超过这个限额的人会被扣分。
-//您可以在代码中实现一些帮助函数。但是，不应该从文件中访问辅助函数。我们将手动检查，如果您没有做到这一点，我们将扣分。
+/*当您的向量已满时，将其容量增加到VECTOR_GROWTH_FACTOR * original_capacity
+当用户在不应该有空指针的地方输入一个空指针时，你的程序必须返回VECTOR_ERROR，一个空指针，一个指针为空、大小为0的迭代器，等等，但是它永远不会崩溃。
+我们要求每四行非空行有一行注释。评论必须是有意义的，而且是用英语写的。
+不允许任何内存泄漏。内存泄漏将自动检测和手动筛选，并将导致您的分数下降后的最后期限。
+我们还将对您的LoC(代码行数)施加400的限制。不要超过这个限额，因为超过这个限额的人会被扣分。
+您可以在代码中实现一些帮助函数。但是，不应该从文件中访问辅助函数。我们将手动检查，如果您没有做到这一点，我们将扣分。*/
 #include<stdlib.h>
 #include<stdio.h>
 #include "vector.h"
@@ -45,7 +45,7 @@ int vector_push_back(Vector* vector, void* element){
         vector->data=q;
         vector->capacity*=VECTOR_GROWTH_FACTOR;
     }
-    memcpy(vector->data+vector->size*vector->element_size,element,vector->element_size);
+    memcpy((char *)vector->data+vector->size*vector->element_size,element,vector->element_size);
     ++vector->size;
     return VECTOR_SUCCESS;
 }//直接把指针给它还是别的做法,element=NULL?
@@ -58,7 +58,7 @@ int vector_push_front(Vector* vector, void* element){
         void *p=vector->data;
         void *q=malloc((vector->capacity*VECTOR_GROWTH_FACTOR)*vector->element_size);
         if(q==NULL) return VECTOR_ERROR;
-        memcpy(q+vector->element_size,p,vector->capacity*vector->element_size);
+        memcpy((char *)q+vector->element_size,p,vector->capacity*vector->element_size);
         free(p);
         vector->data=q;
         vector->capacity*=VECTOR_GROWTH_FACTOR;
@@ -85,7 +85,7 @@ int vector_insert(Vector* vector, size_t index, void* element){
         if(q==NULL) return VECTOR_ERROR;
         memcpy(q,p,vector->element_size*index);
         memcpy(q,element,vector->element_size);
-        memcpy(q+(index+1)*vector->element_size,p+index*vector->element_size,(vector->size-index)*vector->element_size);
+        memcpy((char *)q+(index+1)*vector->element_size,(char *)p+index*vector->element_size,(vector->size-index)*vector->element_size);
         ++vector->size;
         free(p);
         return VECTOR_SUCCESS;
@@ -97,7 +97,7 @@ int vector_assign(Vector* vector, size_t index, void* element){
     if(index>=vector->size) return VECTOR_ERROR;
     if(element==NULL) return VECTOR_ERROR;
     //deal with fault para
-    memcpy(vector->data+vector->element_size*index,element,vector->element_size);
+    memcpy((char *)vector->data+vector->element_size*index,element,vector->element_size);
     return VECTOR_SUCCESS;
 }
 
@@ -111,7 +111,7 @@ int vector_pop_back(Vector* vector){
 int vector_pop_front(Vector* vector){
     if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
     if(vector->size==0) return VECTOR_ERROR;
-    memmove(vector->data,vector->data+vector->element_size,(--vector->size)*vector->element_size);
+    memmove((char *)vector->data,vector->data+vector->element_size,(--vector->size)*vector->element_size);
     return VECTOR_SUCCESS;
 }
 
@@ -126,16 +126,16 @@ int vector_erase(Vector* vector, size_t index){
     if(vector->data==NULL) return VECTOR_ERROR;
     if(index==0) return vector_pop_front(vector);
     else if(index==vector->size-1) return vector_pop_back(vector);
-    else memmove(vector->data+index*vector->element_size,vector->data+(index+1)*vector->element_size,(--vector->size-index)*vector->element_size);
+    else memmove((char *)vector->data+index*vector->element_size,(char *)vector->data+(index+1)*vector->element_size,(--vector->size-index)*vector->element_size);
     return VECTOR_SUCCESS;
 }
 
 void* vector_get(Vector* vector, size_t index){
     if(vector->data==NULL) return NULL;
     if(vector->size<=index) return NULL;
-    void *p=malloc(vector->element_size);
+    void *p; p=malloc(vector->element_size);
     if(p==NULL) return NULL;
-    memcpy(p,vector->data+vector->element_size*index,vector->element_size);
+    memcpy(p,(char *)vector->data+vector->element_size*index,vector->element_size);
     return p;
 }
 
@@ -188,7 +188,7 @@ Iterator vector_end(Vector* vector){
     }
     else{
         iter.element_size=vector->element_size;
-        iter.pointer=vector->data+(vector->size-1)*vector->element_size;
+        iter.pointer=(char *)vector->data+(vector->size-1)*vector->element_size;
     }
     return iter;
 }
@@ -201,14 +201,14 @@ Iterator vector_iterator(Vector* vector, size_t index){
     }
     else{
         iter.element_size=vector->element_size;
-        iter.pointer=vector->data+(vector->size-1)*vector->element_size;
+        iter.pointer=(char *)vector->data+(vector->size-1)*vector->element_size;
     }
     return iter;
 }
 
 void* iterator_get(Iterator* iterator){
     if((iterator->pointer==NULL) || (iterator->element_size==0)) return NULL;
-    void *p=malloc(iterator->element_size);
+    void *p; p=malloc(iterator->element_size);
     memcpy(p,iterator->pointer,iterator->element_size);
     return p;
 }
