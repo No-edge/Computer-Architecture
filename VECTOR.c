@@ -1,338 +1,150 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include"vector.h"
-#include<string.h>
+/* Include the system headers we need */
+#include <stdlib.h>
+#include <stdio.h>
 
-int vector_init(Vector* vector, size_t capacity, size_t element_size){
-    if(vector==NULL) return VECTOR_ERROR;
-    if((capacity<VECTOR_MINIMUM_CAPACITY)) capacity=VECTOR_MINIMUM_CAPACITY;
-    /*No problem*/
-    if(element_size==0) return VECTOR_ERROR;
-    vector->capacity=capacity;
-    /*No problem*/
-    vector->element_size=element_size;
-    /*No problem*/
-    vector->size=0;
-    vector->data=malloc(capacity*element_size);
-    if(vector->data==NULL) return VECTOR_ERROR;
-    /*normal operation, just copy*/
-    return VECTOR_SUCCESS;
-}/*No problem*/
+/* Include our header */
+#include "vector.h"
 
-int vector_destroy(Vector* vector){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    free(vector->data);
-    vector->data=NULL;
-    vector->size=0;
-    /*No problem*/
-    return VECTOR_SUCCESS;
-}/*No problem*/
+/* Define what our struct is */
+struct vector_t {
+    size_t size;
+    int *data;
+};
 
-void* vector_get(Vector* vector, size_t index){
-    void *p;
-    /*No problem*/
-    if(vector==NULL) return NULL;
-    if(vector->data==NULL) return NULL;
-    if(vector->size<=index) return NULL;
-    /*No problem*/
-    p=(char *)vector->data+(index*vector->element_size);
-    return p;
+/* Utility function to handle allocation failures. In this
+   case we print a message and exit. */
+static void allocation_failed() {
+    fprintf(stderr, "Out of memory.\n");
+    exit(1);
 }
-/*No problem*/
 
-size_t vector_size(const Vector* vector){
-    if(vector==NULL) return VECTOR_ERROR;
-    if(vector->data==NULL) return 0;
-    return vector->size;
-}
-/*No problem*/
+/* Bad example of how to create a new vector */
+vector_t *bad_vector_new() {
+    /* Create the vector and a pointer to it */
+    vector_t *retval, v;
+    retval = &v;
 
-int vector_copy(Vector* destination, Vector* source){
-    if(source==NULL) return VECTOR_ERROR;
-    if(destination==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    //if(destination->data!=VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(source->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(vector_init(destination,source->capacity,source->element_size)==VECTOR_ERROR) return VECTOR_ERROR;
-    /*No problem*/
-    memcpy(destination->data,source->data,source->size*source->element_size);
-    destination->size=source->size;
-    return VECTOR_SUCCESS;
-}/*problem*/
-
-int vector_push_back(Vector* vector, void* element){
-    if(vector==NULL) return VECTOR_ERROR;
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(element==NULL) return VECTOR_ERROR;
-    /*deal fault parameter*/
-    if(vector->size==vector->capacity){/*deal with full condition*/
-        void *p=vector->data;
-        void *q=malloc((vector->capacity*VECTOR_GROWTH_FACTOR)*vector->element_size);
-        if(q==NULL) return VECTOR_ERROR;
-        /*No problem*/
-        memcpy(q,p,vector->capacity*vector->element_size);
-        /*no*/
-        free(p);
-        vector->data=q;
-        vector->capacity*=VECTOR_GROWTH_FACTOR;
+    /* Initialize attributes */
+    retval->size = 1;
+    retval->data = malloc(sizeof(int));
+    if (retval->data == NULL) {
+        allocation_failed();
     }
-    /*No problem*/
-    memcpy((char *)vector->data+vector->size*vector->element_size,element,vector->element_size);
-    ++vector->size;
-    return VECTOR_SUCCESS;
-}/*No problem*/
-int vector_push_front(Vector* vector, void* element){
-    void *q,*p;
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    p=vector->data;
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    /*No problem*/
-    if(element==NULL) return VECTOR_ERROR;
-    /*deal with fault para*/
-    if(vector->size==(vector->capacity)){/*deal with full condition*/
-        q=malloc((vector->capacity*VECTOR_GROWTH_FACTOR)*vector->element_size);
-        if(q==NULL) return VECTOR_ERROR;
-        vector->capacity*=VECTOR_GROWTH_FACTOR;
-        /*No problem*/
-    }
-    else q=malloc(vector->capacity*vector->element_size);
-    memcpy((char *)q+vector->element_size,p,vector->size*vector->element_size);
-    vector->data=q;
-    /*No problem*/
-    free(p);
-    memcpy(vector->data,element,vector->element_size);
-    ++vector->size;
-    /*No problem*/
-    return VECTOR_SUCCESS;
+
+    retval->data[0] = 0;
+    return retval;
 }
-/*No problem*/
-int vector_insert(Vector* vector, size_t index, void* element){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(index>vector->size) return VECTOR_ERROR;
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(element==NULL) return VECTOR_ERROR;
-    /*deal para fault*/
-    if(index==0) return vector_push_front(vector,element);
-    else if(index==vector->size) return vector_push_back(vector,element);
-    else{
-        void *p=vector->data,*q;
-        /*No problem*/
-        if(vector->size==vector->capacity){
-            q=malloc((vector->capacity*VECTOR_GROWTH_FACTOR)*vector->element_size);
-            if(q==NULL) return VECTOR_ERROR;
-            vector->capacity*=VECTOR_GROWTH_FACTOR;
-            /*No problem*/
+
+/* Another suboptimal way of creating a vector */
+vector_t also_bad_vector_new() {
+    /* Create the vector */
+    vector_t v;
+
+    /* Initialize attributes */
+    v.size = 1;
+    v.data = malloc(sizeof(int));
+    if (v.data == NULL) {
+        allocation_failed();
+    }
+    v.data[0] = 0;
+    return v;
+}
+
+/* Create a new vector with a size (length) of 1
+   and set its single component to zero... the
+   RIGHT WAY */
+vector_t *vector_new() {
+    /* Declare what this function will return */
+    vector_t *retval;
+
+    /* First, we need to allocate memory on the heap for the struct */
+    retval = malloc(vector_t);
+
+    /* Check our return value to make sure we got memory */
+    if (retval==NULL) {
+        allocation_failed();
+    }
+
+    /* Now we need to initialize our data.
+       Since retval->data should be able to dynamically grow,
+       what do you need to do? */
+    retval->size = 1;
+    retval->data = (int*)malloc(sizeof(int));
+
+    /* Check the data attribute of our vector to make sure we got memory */
+    if (retval->data==NULL) {
+        free(retval);				//Why is this line necessary?
+        allocation_failed();
+    }
+
+    /* Complete the initialization by setting the single component to zero */
+    *retval->data = 0;
+
+    /* and return... */
+    return retval;
+}
+
+/* Return the value at the specified location/component "loc" of the vector */
+int vector_get(vector_t *v, size_t loc) {
+
+    /* If we are passed a NULL pointer for our vector, complain about it and exit. */
+    if(v == NULL) {
+        fprintf(stderr, "vector_get: passed a NULL vector.\n");
+        abort();
+    }
+
+    /* If the requested location is higher than we have allocated, return 0.
+     * Otherwise, return what is in the passed location.
+     */
+    if (loc < v->size) {
+        return *(v->data+loc);
+    } else {
+        return 0;
+    }
+}
+
+/* Free up the memory allocated for the passed vector.
+   Remember, you need to free up ALL the memory that was allocated. */
+void vector_delete(vector_t *v) {
+    if(v==NULL){
+        fprintf(stderr, "vector_get: passed a NULL vector.\n");
+        abort();
+    }
+    free(v->data);
+    free(v);
+}
+
+/* Set a value in the vector. If the extra memory allocation fails, call
+   allocation_failed(). */
+void vector_set(vector_t *v, size_t loc, int value) {
+    /* What do you need to do if the location is greater than the size we have
+     * allocated?  Remember that unset locations should contain a value of 0.
+     */
+    if(v==NULL){
+        fprintf(stderr, "vector_get: passed a NULL vector.\n");
+        abort();
+    }
+    if(v->size<=loc){
+        int *p=(int*)malloc((loc+1)*sizeof(int));
+        if(p==NULL){
+            allocation_failed();
         }
-        /*No problem*/
-        else q=malloc(vector->capacity*vector->element_size);
-        if(q==NULL) return VECTOR_ERROR;
-        memcpy(q,p,vector->element_size*index);
-        memcpy((char *)q+index*vector->element_size,element,vector->element_size);
-        /*No problem*/
-        memcpy((char *)q+(index+1)*vector->element_size,(char *)p+index*vector->element_size,(vector->size-index)*vector->element_size);
-        ++vector->size;
-        free(p);
-        vector->data=q;
-        /*No problem*/
-        return VECTOR_SUCCESS; 
-    }
-}
-/*No problem*/
-int vector_assign(Vector* vector, size_t index, void* element){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(index>=vector->size) return VECTOR_ERROR;
-    if(element==NULL) return VECTOR_ERROR;
-    /*deal with fault para*/
-    memcpy((char *)vector->data+vector->element_size*index,element,vector->element_size);
-    return VECTOR_SUCCESS;
-}
-/*No problem*/
-int vector_pop_back(Vector* vector){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->size==0) return VECTOR_ERROR;
-    --vector->size;
-    return VECTOR_SUCCESS;
-}
-/*No problem*/
-int vector_pop_front(Vector* vector){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    if(vector->size==0) return VECTOR_ERROR;
-    memmove((char *)vector->data,(char *)vector->data+vector->element_size,(--vector->size)*vector->element_size);
-    /*No problem*/
-    return VECTOR_SUCCESS;
-}
-/*No problem*/
-int vector_clear(Vector* vector){
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==VECTOR_UNINITIALIZED) return VECTOR_ERROR;
-    vector->size=0;
-    return VECTOR_SUCCESS;
-}
-/*No problem*/
-int vector_erase(Vector* vector, size_t index){
-    if(vector==NULL) return VECTOR_ERROR;
-    if(vector->size==0) return VECTOR_ERROR;
-    /*No problem*/
-    if(index>=vector->size) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==NULL) return VECTOR_ERROR;
-    if(index==0) return vector_pop_front(vector);
-    else if(index==vector->size-1) return vector_pop_back(vector);
-    /*No problem*/
-    else memmove((char *)vector->data+index*vector->element_size,(char *)vector->data+(index+1)*vector->element_size,(--vector->size-index)*vector->element_size);
-    return VECTOR_SUCCESS;
-}
-/*problem*/
-void* vector_front(Vector* vector){
-    if(vector==NULL) return NULL;
-    /*No problem*/
-    return vector_get(vector,0);
-}
-/*No problem*/
-void* vector_back(Vector* vector){
-    if(vector==NULL) return NULL;
-    /*No problem*/
-    return vector_get(vector,vector->size-1);
-}
-/*No problem*/
-bool vector_is_empty(const Vector* vector){
-    if(vector==NULL) return 0;
-    /*No problem*/
-    return vector->size==0;
-}
-/*No problem*/
-int vector_resize(Vector* vector, size_t new_size){
-    size_t num;
-    if(vector==NULL) return VECTOR_ERROR;
-    /*No problem*/
-    if(vector->data==NULL) return VECTOR_ERROR;
-    num=vector->capacity;
-    /*No problem*/
-    if(new_size>num){
-        void *p=vector->data,*q;
-        while(num<new_size) num=num*VECTOR_GROWTH_FACTOR;
-        /*No problem*/
-        vector->capacity=num;
-        q=malloc(num*vector->element_size);
-        if(q==NULL) return VECTOR_ERROR;
-        /*No problem*/
-        memcpy(q,p,vector->size*vector->element_size);
-        free(p);
-        vector->data=q;
-    }
-    /*No problem*/
-    vector->size=new_size;
-    return VECTOR_SUCCESS;
-}
-/*problem*/
-Iterator vector_begin(Vector* vector){
-    Iterator iter;
-    if((vector==NULL) || (vector->data==NULL) || (vector->size==0)){
-        iter.pointer=NULL;
-        /*No problem*/
-        iter.element_size=0;
-    }
-    /*No problem*/
-    else{
-        iter.element_size=vector->element_size;
-        iter.pointer=vector->data;
-    }
-    /*No problem*/
-    return iter;
-}
-/*No problem*/
-Iterator vector_end(Vector* vector){
-    Iterator iter;
-    if((vector==NULL) || (vector->data==NULL) || (vector->size==0)){
-        /*No problem*/
-        iter.pointer=NULL;
-        iter.element_size=0;
-    }
-    /*No problem*/
-    else{
-        iter.element_size=vector->element_size;
-        /*No problem*/
-        iter.pointer=(char *)vector->data+(vector->size-1)*vector->element_size;
-    }
-    return iter;
-}
-/*No problem*/
-Iterator vector_iterator(Vector* vector, size_t index){
-    Iterator iter;
-    /*No problem*/
-    if((vector==NULL) || (vector->data==NULL) || (vector->size>=index)){
-        iter.pointer=NULL;
-        iter.element_size=0;
+        for(int i=0;i<v->size;++i){
+            int *a=p+i;
+            int *b=v->data+i;
+            *a=*b;
+        }
+        for(int i=v->size;i<loc;++i){
+            int *a=p+i;
+            *a=0;
+        }
+        int *c=p+loc;
+        *c=value;
+        free(v->data);
+        v->data=p;
     }
     else{
-        /*No problem*/
-        iter.element_size=vector->element_size;
-        iter.pointer=(char *)vector->data+index*vector->element_size;
-    }
-    return iter;
-}
-/*No problem*/
-void* iterator_get(Iterator* iterator){
-    /*No problem*/
-    void *p;
-    if((iterator==NULL) || (iterator->pointer==NULL) || (iterator->element_size==0)) return NULL;
-    p=iterator->pointer;
-    /*No problem*/
-    return p;
-}
-void iterator_increment(Iterator* iterator){
-    if((iterator==NULL) || (iterator->pointer==NULL) || (iterator->element_size==0)) return;
-    /*No problem*/
-    else{
-        /*No problem*/
-        char *p;
-        p=iterator->pointer;
-        p+=iterator->element_size;
-        iterator->pointer=p;
-        /*No problem*/
+        int *p=v->data+loc;
+        *p=value;
     }
 }
-/*No problem*/
-void iterator_decrement(Iterator* iterator){
-    if((iterator==NULL) || (iterator->pointer==NULL) || (iterator->element_size==0)) return;
-    /*No problem*/
-    else{
-        char *p;
-        /*No problem*/
-        p=iterator->pointer;
-        p-=iterator->element_size;
-        iterator->pointer=p;
-    }
-    /*No problem*/
-}
-/*No problem*/
-bool iterator_equals(Iterator* first, Iterator* second){
-    if((first==NULL) || (second==NULL)) return false;
-    return((first->pointer==second->pointer) && (first->element_size==second->element_size));
-}
-/*No problem*/
-void vector_sort(Vector *vector, vector_less_func *less){
-    /*No problem*/
-    int a,b;
-    /*No problem*/
-    a=sizeof(vector);
-    b=sizeof(less);
-    a=a+b;
-    b=b+a;
-    /*No problem*/
-    printf("%d %d\n",a,b);
-    return;
-}
-/*No problem*/
