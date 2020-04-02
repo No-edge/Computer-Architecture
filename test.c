@@ -1,4 +1,3 @@
-#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -14,6 +13,9 @@ int get_imm_operand(Instruction inst UNUSED) {//deal with jalr ...
     //I-type
     unsigned int a = inst.itype.imm;
     int b=0x800;
+    int sum=0;
+    int i,c;
+
     b=b&a;
     if(b==0x800)
     {
@@ -21,12 +23,11 @@ int get_imm_operand(Instruction inst UNUSED) {//deal with jalr ...
         a=~a;
     }
     //把二进制转换成十进制
-    int sum=0;
-    for(int i=0;i<12;i++)
+    for(i=0;i<12;i++)
     {
         b=0x1;
         b=b<<i;
-        int c=a&b;
+        c=a&b;
         if(c==b)
         {
             sum+=c;
@@ -49,18 +50,20 @@ int get_branch_offset(Instruction inst UNUSED) {//deal with beq...
 
     //拼接，所得的imm的值为imm
     unsigned int a1,a2,a3,a4;
-    unsigned int imm5,imm7;
+    unsigned int imm5,imm7,imm;
+    int per,i,b,c;
+    int sum=0;
+
     imm5=inst.sbtype.imm5;
     imm7=inst.sbtype.imm7;
     a3=imm5&0x1;
     a3=a3<<10;
     a1=imm5>>1;
-    int per=1<<6;
+    per=1<<6;
     a4=imm7&per;
     a2=imm7-a4;
     a2=a2<<4;
     a4=a4<<5;
-    unsigned int imm;
     imm=a1+a2+a3+a4;
 
     //判断imm的正负
@@ -70,12 +73,12 @@ int get_branch_offset(Instruction inst UNUSED) {//deal with beq...
         imm=~imm;
     }
     //转换成十进制
-    int sum=0;
-    for(int i=0;i<12;i++)
+    
+    for(i=0;i<12;i++)
     {
-        int b=0x1;
+        b=0x1;
         b=b<<i;
-        int c=imm&b;
+        c=imm&b;
         if(c==b)
         {
             sum+=c;
@@ -95,6 +98,9 @@ int get_jump_offset(Instruction inst UNUSED) {//deal with jal
     //UJ-type
     unsigned int a1,a2,a3,a4;
     unsigned int imm=inst.ujtype.imm;
+    int sum=0;
+    int i,b,c;
+
     a4=imm&0x80000;
     a2=imm&0x100;
     a3=imm&0xff;
@@ -111,12 +117,11 @@ int get_jump_offset(Instruction inst UNUSED) {//deal with jal
         imm=~imm;
     }
     //转换成十进制
-    int sum=0;
-    for(int i=0;i<12;i++)
+    for(i=0;i<12;i++)
     {    
-        int b=0x1;
+        b=0x1;
         b=b<<i;
-        int c=imm&b;
+        c=imm&b;
         if(c==b)
         {
             sum+=c;
@@ -134,24 +139,27 @@ int get_jump_offset(Instruction inst UNUSED) {//deal with jal
 int get_store_offset(Instruction inst UNUSED) {//deal with sw,sb,sh...
     /* YOUR CODE HERE */
     //s-type
-    unsigned int a2=inst.stype.imm7;
-    unsigned int a1=inst.stype.imm5;
+    unsigned int a1,a2,imm;
+    int a,i,b,c;
+    int sum=0;
+
+    a2=inst.stype.imm7;
+    a1=inst.stype.imm5;
     a2=a2<<5;
-    unsigned int imm=a1+a2;
+    imm=a1+a2;
     //判断imm的正负
-    int a=0x800;
+    a=0x800;
     a=a&imm;
     if(a==0x800)
     {
         imm-=1;
         imm=~imm;
     }
-    int sum=0;
-    for(int i=0;i<12;i++)
+    for(i=0;i<12;i++)
     {
-        int b=0x1;
+        b=0x1;
         b=b<<i;
-        int c=imm&b;
+        c=imm&b;
         if(c==b)
         {
             sum+=c;
