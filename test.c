@@ -1,3 +1,4 @@
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,175 +9,48 @@ int bitSigner(unsigned int field UNUSED, unsigned int size UNUSED) {
 }
 
 /* You may find implementing this function handy */
-int get_imm_operand(Instruction inst UNUSED) {//deal with jalr ...
-    /* YOUR CODE HERE */
-    //I-type
-    unsigned int a = inst.itype.imm;
-    int b=0x800;
-    int sum=0;
-    int i,c;
-
-    b=b&a;
-    if(b==0x800)
-    {
-        a-=1;
-        a=~a;
-    }
-    //把二进制转换成十进制
-    for(i=0;i<12;i++)
-    {
-        b=0x1;
-        b=b<<i;
-        c=a&b;
-        if(c==b)
-        {
-            sum+=c;
-        }
-    }
-    if(b==0x800)
-    {
-        sum=-1*sum;
-    }
-            
-    return sum;
-            
-}//输入为I-type
+int get_imm_operand(Instruction inst UNUSED) {
+    int retval;
+    retval=(int)inst.itype.imm;
+    if(retval > 2047) retval |= (-4096);
+    return retval;
+}
 
 /* Remember that the offsets should return the offset in BYTES */
 
-int get_branch_offset(Instruction inst UNUSED) {//deal with beq...
-    /* YOUR CODE HERE */
-    //SB-type
-
-    //拼接，所得的imm的值为imm
-    unsigned int a1,a2,a3,a4;
-    unsigned int imm5,imm7,imm;
-    int per,i,b,c;
-    int sum=0;
-
-    imm5=inst.sbtype.imm5;
-    imm7=inst.sbtype.imm7;
-    a3=imm5&0x1;
-    a3=a3<<10;
-    a1=imm5>>1;
-    per=1<<6;
-    a4=imm7&per;
-    a2=imm7-a4;
-    a2=a2<<4;
-    a4=a4<<5;
-    imm=a1+a2+a3+a4;
-
-    //判断imm的正负
-    if(a4==0x800)
-    {
-        imm-=1;
-        imm=~imm;
-    }
-    //转换成十进制
-    
-    for(i=0;i<12;i++)
-    {
-        b=0x1;
-        b=b<<i;
-        c=imm&b;
-        if(c==b)
-        {
-            sum+=c;
-        }   
-    }
-
-    if(a4==0x800)
-    {
-        sum=-1*sum;
-    }
-            
-    return sum; 
+int get_branch_offset(Instruction inst UNUSED) {
+    int pa,pb,pc,pd,retval;
+    pc = inst.sbtype.imm5 & 1;
+    pa = inst.sbtype.imm5 - pc;
+    pd = (inst.sbtype.imm7 & (1<<6));
+    pb = (inst.sbtype.imm7 - pd);
+    retval = (pa >> 1) + (pc << 10) + (pb << 4) + (pd << 5);
+    if(retval & (1<<11)) retval |= (-4096);
+    return retval;
 }
 
-int get_jump_offset(Instruction inst UNUSED) {//deal with jal
-    /* YOUR CODE HERE */
-    //UJ-type
-    unsigned int a1,a2,a3,a4;
-    unsigned int imm=inst.ujtype.imm;
-    int sum=0;
-    int i,b,c;
-
-    a4=imm&0x80000;
-    a2=imm&0x100;
-    a3=imm&0xff;
-    a1=imm&0x7fe00;
-    a1=a1>>9;
-    a2=a2<<2;
-    a3=a3<<11;
-    imm=a1+a2+a3+a4;
-
-    //判断imm的正负
-    if(a4==0x80000)
-    {        
-        imm-=1;
-        imm=~imm;
-    }
-    //转换成十进制
-    for(i=0;i<12;i++)
-    {    
-        b=0x1;
-        b=b<<i;
-        c=imm&b;
-        if(c==b)
-        {
-            sum+=c;
-        }   
-    }
-
-    if(a4==0x80000)
-    {
-        sum=-1*sum;
-    }
-                
-    return sum; 
+int get_jump_offset(Instruction inst UNUSED) {
+    int pa,pb,pc,pd,retval;
+    pa = (inst.ujtype.imm >> 9) & 1023;
+    pb = (inst.ujtype.imm >> 8) & 1;
+    pc = (inst.ujtype.imm) & 255;
+    pd = (inst.ujtype.imm >> 19) & 1;
+    retval = pa + (pb << 10) +(pc << 11) + (pd << 19);
+    if(pd) retval |= (-1048576);
+    return retval;
 }
 
-int get_store_offset(Instruction inst UNUSED) {//deal with sw,sb,sh...
-    /* YOUR CODE HERE */
-    //s-type
-    unsigned int a1,a2,imm;
-    int a,i,b,c;
-    int sum=0;
-
-    a2=inst.stype.imm7;
-    a1=inst.stype.imm5;
-    a2=a2<<5;
-    imm=a1+a2;
-    //判断imm的正负
-    a=0x800;
-    a=a&imm;
-    if(a==0x800)
-    {
-        imm-=1;
-        imm=~imm;
-    }
-    for(i=0;i<12;i++)
-    {
-        b=0x1;
-        b=b<<i;
-        c=imm&b;
-        if(c==b)
-        {
-            sum+=c;
-        }   
-    }
-
-    if(a==0x800)
-    {
-        sum=-1*sum;
-    }
-        
-    return sum;
- 
+int get_store_offset(Instruction inst UNUSED) {
+    int pa,pb,retval;
+    pa = inst.stype.imm5;
+    pb = inst.stype.imm7 << 5;
+    retval = pb+pa;
+    if(retval & (1<<11)) retval |= (-4096);
+    return retval;
 }
 
 void handle_invalid_instruction(Instruction inst) {
-    printf("Invalid Instruction: 0x%08x\n", inst.bits); 
+    printf("Invalid Instruction: 0x%08x\n", inst.bits);
 }
 
 void handle_invalid_read(Address address) {
@@ -188,4 +62,3 @@ void handle_invalid_write(Address address) {
     printf("Bad Write. Address: 0x%08x\n", address);
     exit(-1);
 }
-
